@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuralComm Live</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ========== TOP BAR ========== -->
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-name">NeuralComm</span>
+        <span class="brand-sub">Live Protocol Monitor</span>
+      </div>
+      <div class="topbar-center">
+        <span class="session-label" id="session-label">No Session</span>
+      </div>
+      <div class="topbar-right">
+        <span class="status-badge" id="status-badge" data-status="idle">Idle</span>
+        <span class="elapsed" id="elapsed">—</span>
+      </div>
+    </header>
+
+    <!-- ========== QUESTION + CONTROLS BAR ========== -->
+    <div id="control-bar">
+      <input type="text" id="question-input" placeholder="输入问题后点击 Run 启动实验..." />
+      <button id="run-btn" class="btn primary">Run</button>
+      <button id="stop-btn" class="btn danger" disabled>Stop</button>
+      <div class="quick-stats" id="quick-stats">
+        <span class="stat"><em>R</em><b id="stat-round">—</b></span>
+        <span class="stat"><em>⚔</em><b id="stat-attacks">—</b></span>
+        <span class="stat"><em>活</em><b id="stat-active">—</b></span>
+        <span class="stat"><em>崩</em><b id="stat-broken">—</b></span>
+        <span class="stat"><em>α</em><b id="stat-alpha">—</b></span>
+      </div>
+    </div>
+
+    <!-- ========== MAIN GRID ========== -->
+    <div id="main-grid">
+
+      <!-- LEFT: Agent Chains -->
+      <section id="chains-panel" class="panel">
+        <div class="panel-hdr">
+          <span class="mono-label">AGENT CHAINS</span>
+          <span class="mono-label dim" id="chains-count">0 active</span>
+        </div>
+        <div class="chains-scroll" id="chains-container">
+          <div class="empty-hint" id="chains-empty">等待模型构建推理链...</div>
+        </div>
+      </section>
+
+      <!-- CENTER: Attack Feed -->
+      <section id="attacks-panel" class="panel">
+        <div class="panel-hdr">
+          <span class="mono-label">ATTACK FEED</span>
+          <span class="mono-label dim" id="attacks-count">0 attacks</span>
+        </div>
+        <div class="attacks-scroll" id="attacks-container">
+          <div class="empty-hint" id="attacks-empty">等待攻击事件...</div>
+        </div>
+        <!-- Verification -->
+        <div class="panel-hdr sub">
+          <span class="mono-label">VERIFICATION</span>
+        </div>
+        <div class="verify-scroll" id="verify-container">
+          <div class="empty-hint dim">DeepSeek 查证记录将显示在这里</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Metrics -->
+      <aside id="metrics-panel" class="panel">
+        <!-- Entropy -->
+        <div class="panel-hdr">
+          <span class="mono-label">ENTROPY (10-DIM)</span>
+        </div>
+        <div class="entropy-grid" id="entropy-grid">
+          <div class="entropy-row"><span>semantic</span><span class="val" id="e-semantic">—</span></div>
+          <div class="entropy-row"><span>causal</span><span class="val" id="e-causal">—</span></div>
+          <div class="entropy-row"><span>boundary</span><span class="val" id="e-boundary">—</span></div>
+          <div class="entropy-row"><span>temporal</span><span class="val" id="e-temporal">—</span></div>
+          <div class="entropy-row"><span>dependency</span><span class="val" id="e-dependency">—</span></div>
+          <div class="entropy-row"><span>divergence</span><span class="val" id="e-divergence">—</span></div>
+          <div class="entropy-row"><span>information</span><span class="val" id="e-information">—</span></div>
+          <div class="entropy-row"><span>propagation</span><span class="val" id="e-propagation">—</span></div>
+          <div class="entropy-row"><span>evidence</span><span class="val" id="e-evidence">—</span></div>
+          <div class="entropy-row"><span>impact</span><span class="val" id="e-impact">—</span></div>
+          <div class="entropy-row total"><span>TOTAL</span><span class="val" id="e-total">—</span></div>
+        </div>
+
+        <!-- Consensus -->
+        <div class="panel-hdr sub">
+          <span class="mono-label">α CONSENSUS</span>
+        </div>
+        <div class="consensus-block" id="consensus-block">
+          <div class="alpha-big" id="alpha-value">—</div>
+          <div class="alpha-meta">
+            <span>fragile <b id="fragile-value">—</b></span>
+          </div>
+        </div>
+
+        <!-- Convergence -->
+        <div class="panel-hdr sub">
+          <span class="mono-label">CONVERGENCE</span>
+        </div>
+        <div class="convergence-block" id="convergence-block">
+          <span id="convergence-text">等待...</span>
+        </div>
+
+        <!-- Consensus Claims -->
+        <div class="panel-hdr sub">
+          <span class="mono-label">EMERGED CONSENSUS</span>
+        </div>
+        <div class="claims-list" id="consensus-claims">
+          <div class="empty-hint dim">运行完成后显示...</div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ========== EVENT LOG ========== -->
+    <footer id="log-bar">
+      <div class="log-hdr">
+        <span class="mono-label">EVENT LOG</span>
+        <button id="clear-log-btn" class="btn tiny">Clear</button>
+      </div>
+      <div class="log-scroll" id="log-container">
+        <div class="empty-hint dim">事件日志将实时显示在这里...</div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

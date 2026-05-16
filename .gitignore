@@ -1,0 +1,26 @@
+# 环境变量 (含 API keys)
+.env
+
+# 共识存储状态
+.neuralcomm-state/
+
+# 日志
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Benchmark 结果
+benchmark/results/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
