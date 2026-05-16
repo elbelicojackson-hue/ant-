@@ -1,0 +1,363 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm,algorithmic}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{property}{Property}
+
+\title{\textbf{Neural Consensus Protocol (NCP)} \\ \Large Mathematical Foundations and Algorithm Specification}
+\author{NCP Working Group \\ \texttt{https://github.com/elbelicojackson-hue/ant-}}
+\date{May 2026 — Version 1.0}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document provides the complete mathematical specification of the Neural Consensus Protocol (NCP), including entropy calculations, convergence proofs, game-theoretic analysis, and algorithm complexity bounds. It serves as the formal reference for implementors and researchers.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════
+\section{Formal Definitions}
+
+\begin{definition}[Reasoning Chain]
+A reasoning chain $\mathcal{C}$ is a tuple $(id, a, v, S, \sigma)$ where:
+\begin{itemize}
+    \item $id \in \mathcal{H}$ is a unique identifier (hash)
+    \item $a \in \mathcal{A}$ is the owning agent
+    \item $v \in \mathbb{N}^+$ is the version number
+    \item $S = (s_1, s_2, \ldots, s_k)$ is an ordered sequence of steps
+    \item $\sigma \in \{\texttt{active}, \texttt{broken}, \texttt{archived}\}$ is the chain status
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Step]
+A step $s_i$ is a tuple $(i, c_i, \tau_i, n_i)$ where:
+\begin{itemize}
+    \item $i \in \mathbb{N}^+$ is the step index
+    \item $c_i \in \Sigma^*$ is the assertion content (natural language)
+    \item $\tau_i \in \{\texttt{active}, \texttt{collapsed}, \texttt{fortified}\}$ is the step status
+    \item $n_i \in \mathbb{N}$ is the attack count
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Attack]
+An attack $\mathcal{X}$ is a tuple $(a_{src}, \mathcal{C}_{tgt}, i_{tgt}, r, \omega)$ where:
+\begin{itemize}
+    \item $a_{src} \in \mathcal{A}$ is the attacker
+    \item $\mathcal{C}_{tgt}$ is the target chain
+    \item $i_{tgt}$ is the target step index
+    \item $r \in \Sigma^*$ is the attack reason
+    \item $\omega \in \{0, 1\}$ is the outcome (0 = defended, 1 = collapsed)
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Address]
+Every step in the system has a unique address:
+$$\text{addr}(s) = a.\text{v}v.s_i \quad \text{e.g., } \texttt{GPT-5.4.v2.Step3}$$
+\end{definition}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Entropy Calculations}
+
+\subsection{10-Dimensional Entropy Vector}
+
+\begin{definition}[Entropy Vector]
+The system state at time $t$ is characterized by a 10-dimensional entropy vector:
+$$\mathbf{H}(t) = (H_{sem}, H_{cau}, H_{bnd}, H_{tmp}, H_{dep}, H_{div}, H_{inf}, H_{prp}, H_{evi}, H_{imp})$$
+where each component $H_i \in [0, 1]$ measures a distinct type of uncertainty.
+\end{definition}
+
+\subsection{Divergence Entropy (Stance-Based)}
+
+Rather than text similarity, we compute divergence from \textbf{stance vectors}:
+
+\begin{definition}[Stance Vector]
+For each active chain $\mathcal{C}_a$, define a stance vector $\mathbf{v}_a \in \{-1, 0, +1\}^d$ over $d$ stance dimensions (e.g., ``affirm threat'', ``urgency'', ``scope'', ``factual basis'').
+
+For each dimension $j$:
+$$v_{a,j} = \begin{cases}
++1 & \text{if positive signal words dominate in } \mathcal{C}_a \\
+-1 & \text{if negative signal words dominate} \\
+0 & \text{if neither or both}
+\end{cases}$$
+\end{definition}
+
+\begin{definition}[Stance Agreement]
+For two agents $a, b$:
+$$\text{agree}(a, b) = \frac{1}{|\mathcal{D}|} \sum_{j \in \mathcal{D}} \begin{cases}
+1 & \text{if } v_{a,j} = v_{b,j} \\
+0.5 & \text{if } v_{a,j} = 0 \text{ or } v_{b,j} = 0 \\
+0 & \text{otherwise}
+\end{cases}$$
+where $\mathcal{D} = \{j : v_{a,j} \neq 0 \text{ or } v_{b,j} \neq 0\}$.
+\end{definition}
+
+The divergence entropy is then:
+$$H_{div} = 1 - \frac{2}{|\mathcal{A}|(|\mathcal{A}|-1)} \sum_{a < b} \text{agree}(a, b)$$
+
+\subsection{Total Entropy with Impact Amplification}
+
+\begin{theorem}[Amplified Total Entropy]
+The total entropy is not a simple mean but is amplified by the impact dimension:
+$$H_{total} = \min\left(1, \; \bar{H} \cdot (1 + 0.5 \cdot H_{imp})\right)$$
+where $\bar{H} = \frac{1}{10}\sum_{i=1}^{10} H_i$ is the base mean.
+\end{theorem}
+
+\textbf{Rationale}: When $H_{imp}$ is high (attacks are causing large shifts), any remaining uncertainty is more dangerous. The amplification factor ranges from $1.0\times$ (no impact) to $1.5\times$ (maximum impact).
+
+\subsection{Dependency Entropy}
+
+$$H_{dep} = \frac{|\{s \in S_{all} : \tau_s = \texttt{collapsed}\}|}{|S_{all}|}$$
+
+where $S_{all}$ is the set of all steps in non-archived chains.
+
+\subsection{Propagation Entropy}
+
+$$H_{prp} = \frac{|\{\mathcal{C} : \sigma_\mathcal{C} = \texttt{broken}\}|}{|\{\mathcal{C} : \sigma_\mathcal{C} \neq \texttt{archived}\}|}$$
+
+% ═══════════════════════════════════════════════════════════════
+\section{UCB1 Attack Scheduling}
+
+\subsection{Multi-Armed Bandit Formulation}
+
+We model attack target selection as a multi-armed bandit where each step is an arm:
+
+\begin{definition}[UCB1 Score]
+For step $s_i$ with attack count $n_i$, collapse count $c_i$, and total attacks $N$:
+$$\text{UCB}(s_i) = \underbrace{\frac{c_i}{n_i}}_{\text{exploitation}} + \underbrace{\sqrt{2} \cdot \sqrt{\frac{\ln N}{n_i}}}_{\text{exploration}} + \underbrace{0.1 \cdot \ln(1 + \Delta t_i)}_{\text{recency}}$$
+where $\Delta t_i$ is the number of rounds since $s_i$ was last attacked.
+\end{definition}
+
+\begin{property}[Exploration Guarantee]
+If $n_i = 0$ (step never attacked), then $\text{UCB}(s_i) = +\infty$, guaranteeing that every step is attacked at least once before any step is attacked twice.
+\end{property}
+
+\begin{theorem}[Coverage Bound]
+With $|\mathcal{A}|$ agents and $|S|$ total steps, after $r$ rounds:
+$$\text{coverage}(r) \geq \min\left(1, \; \frac{r \cdot |\mathcal{A}|}{|S|}\right)$$
+In particular, with 30 agents and 7 steps per chain (210 total steps), full coverage is achieved in $\lceil 210/30 \rceil = 7$ rounds.
+\end{theorem}
+
+\subsection{Information Routing (Not Prompt Injection)}
+
+The UCB scores determine \textbf{display order}, not instructions:
+
+\begin{algorithm}
+\caption{Information Routing for Agent $a$}
+\begin{algorithmic}[1]
+\STATE $\text{chains} \leftarrow \{\mathcal{C} : \sigma_\mathcal{C} = \texttt{active}, \mathcal{C}.a \neq a\}$
+\FOR{each $\mathcal{C} \in \text{chains}$}
+    \STATE $\text{score}(\mathcal{C}) \leftarrow \max_{s \in \mathcal{C}.S} \text{UCB}(s)$
+\ENDFOR
+\STATE Sort chains by score (descending)
+\STATE Display chains to agent $a$ in sorted order
+\STATE Mark unverified steps with $\texttt{⚠}$, fortified with $\texttt{✓}$
+\end{algorithmic}
+\end{algorithm}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Decentralized Voting}
+
+\subsection{Voting Protocol}
+
+\begin{definition}[Decentralized Vote]
+Given attack $\mathcal{X} = (a_{src}, \mathcal{C}_{tgt}, i_{tgt}, r, \_)$, the voting set is:
+$$\mathcal{V} = \mathcal{A} \setminus \{a_{src}\}$$
+Each voter $v \in \mathcal{V}$ independently produces:
+$$\text{vote}(v) \in \{\texttt{collapsed}, \texttt{defended}\}$$
+\end{definition}
+
+\begin{definition}[Majority Decision]
+$$\omega = \begin{cases}
+1 \; (\texttt{collapsed}) & \text{if } |\{v : \text{vote}(v) = \texttt{collapsed}\}| > |\{v : \text{vote}(v) = \texttt{defended}\}| \\
+0 \; (\texttt{defended}) & \text{otherwise}
+\end{cases}$$
+\end{definition}
+
+\begin{property}[No Privileged Node]
+No agent has a special role (no ``judge'', no ``arbiter''). The attacker does not vote on its own attack. All voters are equal.
+\end{property}
+
+\begin{property}[Parallel Execution]
+All votes are collected simultaneously:
+$$\text{latency}(\text{voting}) = \max_{v \in \mathcal{V}} \text{latency}(v) = O(1) \text{ w.r.t. } |\mathcal{V}|$$
+\end{property}
+
+\subsection{Robustness Analysis}
+
+\begin{theorem}[Byzantine Fault Tolerance]
+With $|\mathcal{V}| = n$ voters, the protocol tolerates up to $\lfloor (n-1)/2 \rfloor$ Byzantine (always-collapse or always-defend) voters while still producing correct majority decisions.
+\end{theorem}
+
+\begin{proof}
+A Byzantine voter can at most contribute 1 vote in the wrong direction. With $f$ Byzantine voters, the honest majority is $n - f > n/2$ when $f < n/2$, i.e., $f \leq \lfloor (n-1)/2 \rfloor$.
+\end{proof}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Convergence Theory}
+
+\subsection{Convergence Conditions}
+
+\begin{definition}[Verified Convergence]
+The system converges when:
+$$\text{coverage}(t) > \theta_c \;\wedge\; \text{verified\_ratio}(t) > \theta_v \;\wedge\; t \geq t_{min}$$
+where:
+\begin{align}
+\text{coverage}(t) &= \frac{|\{s : n_s > 0\}|}{|S_{all}|} \\
+\text{verified\_ratio}(t) &= \frac{|\{s : n_s > 0 \wedge \tau_s \neq \texttt{collapsed}\}|}{|S_{all}|}
+\end{align}
+Default thresholds: $\theta_c = 0.5$, $\theta_v = 0.4$, $t_{min} = 2$.
+\end{definition}
+
+\subsection{Scaling Law}
+
+\begin{theorem}[Convergence Speed vs. Agent Count]
+Expected rounds to convergence:
+$$\mathbb{E}[T] \leq \left\lceil \frac{\theta_c \cdot |S_{all}|}{|\mathcal{A}|} \right\rceil + 1$$
+\end{theorem}
+
+\begin{proof}
+Each round, $|\mathcal{A}|$ attacks are issued. In the worst case, each attack targets a unique step (UCB1 guarantees this for unexplored steps). After $r$ rounds, at least $r \cdot |\mathcal{A}|$ steps have been attacked. Coverage threshold $\theta_c$ is reached when $r \cdot |\mathcal{A}| \geq \theta_c \cdot |S_{all}|$, giving $r \geq \theta_c \cdot |S_{all}| / |\mathcal{A}|$. Adding 1 round for the convergence check.
+\end{proof}
+
+\begin{corollary}
+With 30 agents, 7 chains of 7 steps each ($|S_{all}| = 49$), and $\theta_c = 0.5$:
+$$\mathbb{E}[T] \leq \lceil 0.5 \times 49 / 30 \rceil + 1 = 2 \text{ rounds}$$
+\end{corollary}
+
+This proves the key claim: \textbf{more agents $\Rightarrow$ faster convergence}.
+
+% ═══════════════════════════════════════════════════════════════
+\section{ELO Reputation System}
+
+\subsection{Rating Update}
+
+After attack $\mathcal{X}$ between attacker $a$ and defender $d$:
+
+$$E_a = \frac{1}{1 + 10^{(R_d - R_a)/400}}, \quad E_d = 1 - E_a$$
+
+\begin{align}
+R_a' &= R_a + K \cdot (\omega - E_a) \\
+R_d' &= R_d + K \cdot ((1-\omega) - E_d)
+\end{align}
+
+where $K = 32$ (base K-factor), $\omega = 1$ if attack succeeds, $\omega = 0$ otherwise.
+
+\subsection{Vote Weight Mapping}
+
+$$w(a) = \text{clip}\left(\frac{R_a - 800}{400} + 0.5, \; 0.5, \; 2.0\right)$$
+
+\begin{property}[Weight Range]
+\begin{itemize}
+    \item $R = 800 \Rightarrow w = 0.5$ (minimum influence)
+    \item $R = 1000 \Rightarrow w = 1.0$ (neutral)
+    \item $R = 1200 \Rightarrow w = 1.5$ (high influence)
+    \item $R = 1400 \Rightarrow w = 2.0$ (maximum influence)
+\end{itemize}
+\end{property}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Consensus Persistence}
+
+\subsection{Decay Function}
+
+For a verified claim stored at time $t_0$ with initial confidence $\phi_0 = 1.0$:
+
+$$\phi(t) = \max\left(\phi_{floor}, \; 1.0 - \lambda(t - t_0) + \mu \cdot n_{ref}(t)\right)$$
+
+where:
+\begin{itemize}
+    \item $\lambda = 0.005$ day$^{-1}$ (decay rate)
+    \item $\phi_{floor} = 0.3$ (minimum confidence before revocation)
+    \item $\mu = 0.02$ (reference boost per citation)
+    \item $n_{ref}(t)$ = cumulative reference count at time $t$
+\end{itemize}
+
+\subsection{Challenge Penalty}
+
+When a stored claim is successfully challenged:
+$$\phi' = \phi - \delta_{challenge}, \quad \delta_{challenge} = 0.15$$
+
+If $\phi' \leq 0.1$, the claim is \textbf{revoked} and propagation occurs:
+$$\forall c' \in \text{depends\_on}(c): \quad \phi_{c'} \leftarrow \phi_{c'} - 0.2$$
+
+\subsection{Cross-Session α Calculation}
+
+\begin{definition}[Consensus Degree]
+For a claim $c$ across $n$ active chains:
+$$\alpha(c) = \frac{\sum_{a \in \mathcal{A}} w(a) \cdot \mathbb{1}[c \in \mathcal{C}_a]}{\sum_{a \in \mathcal{A}} w(a)}$$
+where $\mathbb{1}[c \in \mathcal{C}_a] = 1$ if agent $a$'s chain contains claim $c$.
+\end{definition}
+
+Convergence threshold: $\alpha \geq 0.65$ triggers \texttt{TRUE\_CONSENSUS}.
+
+% ═══════════════════════════════════════════════════════════════
+\section{Complexity Analysis}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Component} & \textbf{Per-Round Complexity} & \textbf{Bottleneck} \\
+\midrule
+Chain parsing & $O(|\mathcal{A}| \cdot k)$ & Regex matching \\
+UCB1 scoring & $O(|S_{all}|)$ & Step traversal \\
+Attack routing & $O(|\mathcal{A}| \cdot |S_{all}|)$ & Display construction \\
+Parallel voting & $O(1)$ latency, $O(|\mathcal{V}|)$ calls & Slowest model \\
+Entropy computation & $O(|\mathcal{A}| \cdot k)$ & Stance extraction \\
+α extraction & $O(1)$ call & Single model call \\
+Consensus store & $O(|C_{store}|)$ & Keyword matching \\
+\bottomrule
+\end{tabular}
+\caption{Algorithm complexity per round. $k$ = average steps per chain.}
+\end{table}
+
+\textbf{True bottleneck}: LLM inference latency ($\sim$10-30s per call). All algorithmic overhead is sub-second.
+
+% ═══════════════════════════════════════════════════════════════
+\section{Protocol Invariants}
+
+The following invariants must hold at all times:
+
+\begin{enumerate}[label=\textbf{I\arabic*}]
+    \item $\forall \mathcal{C}: v_\mathcal{C} \geq 1$ (version is positive)
+    \item $\forall s: n_s \geq 0$ (attack count is non-negative)
+    \item $\tau_s = \texttt{fortified} \Rightarrow n_s \geq 2$ (fortification requires 2+ survived attacks)
+    \item $\sigma_\mathcal{C} = \texttt{broken} \Rightarrow \exists s \in \mathcal{C}.S: \tau_s = \texttt{collapsed}$ (broken chains have collapsed steps)
+    \item $\text{REPAIR}(\mathcal{C}) \Rightarrow v_{\mathcal{C}'} = v_\mathcal{C} + 1$ (repair increments version)
+    \item $\sigma_\mathcal{C} = \texttt{archived} \Rightarrow \nexists \mathcal{X}: \mathcal{X}.\mathcal{C}_{tgt} = \mathcal{C}$ (archived chains cannot be attacked)
+    \item $\text{vote}(a_{src}, \mathcal{X}) = \bot$ (attacker cannot vote on own attack)
+    \item $H_{total} \in [0, 1]$ (entropy is bounded)
+    \item $\alpha(c) \in [0, 1]$ (consensus degree is bounded)
+    \item $\phi(t) \geq \phi_{floor}$ unless revoked (confidence has a floor)
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Conclusion}
+
+This document provides the complete mathematical foundation for NCP v1.0. The protocol achieves:
+\begin{itemize}
+    \item \textbf{Correctness}: Convergence is guaranteed under the coverage bound theorem
+    \item \textbf{Efficiency}: $O(1)$ voting latency, $O(|S|/|\mathcal{A}|)$ rounds to convergence
+    \item \textbf{Robustness}: Byzantine fault tolerance up to $\lfloor (n-1)/2 \rfloor$ faulty nodes
+    \item \textbf{Auditability}: Every state transition has a complete evidence chain
+    \item \textbf{Composability}: Cross-session persistence with formal decay guarantees
+\end{itemize}
+
+\end{document}

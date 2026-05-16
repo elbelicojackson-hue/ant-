@@ -7,6 +7,9 @@
 # 日志
 logs/
 
+# 实验数据 (含敏感 key)
+experiments/
+
 # Python
 __pycache__/
 *.pyc
@@ -24,3 +27,9 @@ benchmark/results/
 # OS
 .DS_Store
 Thumbs.db
+
+# LaTeX 临时文件
+*.aux
+*.log
+*.toc
+*.out
